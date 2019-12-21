@@ -24,6 +24,9 @@ library(qrcode)
 qrcode_gen('https://agricolamz.github.io/2019.12.21_EU_purrr/index.html')
 ```
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=9)
+```
 
 ```{r, message=FALSE}
 library(tidyverse)
@@ -132,7 +135,7 @@ got_chars %>%
 
 Скачайте [частотный словарь русского языка [Шаров, Ляшевская 2011] (он храниться в `.tsv`)](https://raw.githubusercontent.com/agricolamz/DS_for_DH/master/data/freq_dict_2011.csv), разбейте столбец `lemma` на буквы при помощи функции `str_split(dict$lemma, "")`, а на основе полученного списка постройте график, на котором изображено, сколько раз встретилась какая буква:
 
-```{r, echo=FALSE, cache=TRUE, message=FALSE}
+```{r, echo=FALSE, message=FALSE}
 dict <- read_tsv("https://raw.githubusercontent.com/agricolamz/DS_for_DH/master/data/freq_dict_2011.csv")
 
 str_split(dict$lemma, "") %>% 
@@ -206,7 +209,7 @@ Cкорее всего полетела кодировка. Я все делаю
 В датасете, собранный [Adithya Ganesh](https://www.kaggle.com/adithyarganesh/english-premier-league-player-data-20182019#fpl_data_2018_2019.json), хранится информация об играках Английской Премьер-лиги. На основании этих данных (лежат в папке `data`) постройте график 30 игроков, которые забили больше всего голов и раскрасьте на основании их футбольного клуба.
 
 
-```{r, echo=FALSE, cache=TRUE, message=FALSE}
+```{r, echo=FALSE, message=FALSE}
 fpl <- jsonlite::read_json("https://raw.githubusercontent.com/r-classes/2019_2020_ds4dh_hw3_purr_gutenbergr_tidytext_udpipe/master/data/fpl_data_2018_2019.json")
 fpl %>% 
   tibble(name = names(fpl),
@@ -346,4 +349,40 @@ diamonds %>%
 * `name` -- название
 * `n` -- сколько раз взяли в том или иному году
 * `year` -- год
+
+Данные лежат вот здесь:
+
+* https://raw.githubusercontent.com/agricolamz/2019.12.21_EU_purrr/master/data/seattle_public_library_2005.csv
+* https://raw.githubusercontent.com/agricolamz/2019.12.21_EU_purrr/master/data/seattle_public_library_2006.csv
+* ...
+* https://raw.githubusercontent.com/agricolamz/2019.12.21_EU_purrr/master/data/seattle_public_library_2019.csv
+
+Давайте считаем их все:
+
+```{r, message=FALSE}
+links <- str_c("https://raw.githubusercontent.com/agricolamz/2019.12.21_EU_purrr/master/data/seattle_public_library_", 2005:2019, ".csv")
+
+df <- map(links, read_csv)
+str(df, max.level = 1)
+```
+
+
+Можно даже соединить их в один датафрейм:
+
+```{r, message=FALSE}
+df_2 <- map_dfr(links, read_csv)
+df_2
+df_2 %>%
+  group_by(type, name) %>%
+  summarise(sum_n = sum(n))  %>%
+  ungroup() %>%
+  arrange(-sum_n) %>%
+  slice(1:100) %>%
+  ggplot(aes(fct_reorder(str_trunc(name, 40), sum_n), sum_n, fill = type))+
+  geom_col()+
+  coord_flip()+
+  labs(x = "", y = "",
+       title = "Most popular physical item checkouts from Seattle Public Library (2005-2019)",
+       caption = "data from https://data.seattle.gov/dataset/Checkouts-by-Title-Physical-Items-/3h5r-qv5w")
+```
 
